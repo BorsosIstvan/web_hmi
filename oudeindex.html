@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>István's HMI Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+</head>
+<body>
+  <h1>HMI Dashboard</h1>
+  
+  <button id="sendButton">Stuur MQTT</button>
+
+  <div class="status-led" id="led"></div>
+  <p>Status: <span id="ledStatus">OFF</span></p>
+
+  <script src="script.js"></script>
+</body>
+</html>
