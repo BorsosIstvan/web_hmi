@@ -1,4 +1,4 @@
-const client = mqtt.connect('ws://127.0.0.1:9001'); // Pas eventueel IP/hostname aan
+const client = mqtt.connect('ws://10.100.103.16:9001'); // Pas eventueel IP/hostname aan
 
 client.on('connect', () => {
   console.log("MQTT verbonden");
