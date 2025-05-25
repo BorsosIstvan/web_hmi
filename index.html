@@ -10,7 +10,7 @@
   <div id="status"></div>
 
   <script>
-    const client = mqtt.connect('ws://10.100.103.16:9001'); // Pas IP aan
+    const client = mqtt.connect('ws://poci.n-soft.net:9001'); // Pas IP aan
 
     client.on('connect', () => {
       document.getElementById('status').textContent = 'Verbonden met MQTT broker via WebSocket';
