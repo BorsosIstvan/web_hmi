@@ -1,12 +1,12 @@
-const client = mqtt.connect('poci.n-soft.net:1883'); // Pas eventueel IP/hostname aan
+const client = mqtt.connect('ws://raspberrypi.local:9001'); // Pas eventueel IP/hostname aan
 
 client.on('connect', () => {
   console.log("MQTT verbonden");
-  client.subscribe('test/topic'); // Luister op dit topic
+  client.subscribe('hmi/led'); // Luister op dit topic
 });
 
 client.on('message', (topic, message) => {
-  if (topic === 'test/topic') {
+  if (topic === 'hmi/led') {
     const led = document.getElementById('led');
     const status = document.getElementById('ledStatus');
     if (message.toString() === 'on') {
