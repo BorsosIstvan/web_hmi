@@ -29,7 +29,7 @@ client.on('message', (topic, message) => {
 });
 
 document.getElementById('sendButton').addEventListener('click', () => {
-  console.log('Stuur bericht "pressed" naar topic hmi/button');
-  client.publish('hmi/button', 'pressed');
+  console.log('Stuur bericht "on" naar topic hmi/led');
+  client.publish('hmi/led', 'on');
 });
 
