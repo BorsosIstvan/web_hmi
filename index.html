@@ -1,33 +1,20 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>MQTT WebSocket Test</title>
+  <meta charset="UTF-8">
+  <title>István's HMI Dashboard</title>
+  <link rel="stylesheet" href="style.css">
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 </head>
 <body>
-  <h1>MQTT WebSocket Test</h1>
-  <button id="sendButton">Stuur bericht</button>
-  <div id="status"></div>
+  <h1>HMI Dashboard</h1>
+  
+  <button id="sendButton">Stuur MQTT</button>
 
-  <script>
-    const client = mqtt.connect('ws://poci.n-soft.net:9001'); // Pas IP aan
+  <div class="status-led" id="led"></div>
+  <p>Status: <span id="ledStatus">OFF</span></p>
 
-    client.on('connect', () => {
-      document.getElementById('status').textContent = 'Verbonden met MQTT broker via WebSocket';
-      client.subscribe('hmi/led');
-    });
-
-    client.on('message', (topic, message) => {
-      if (topic === 'hmi/led') {
-        alert("Bericht ontvangen: " + message.toString());
-      }
-    });
-
-    document.getElementById('sendButton').onclick = () => {
-      client.publish('hmi/button', 'pressed');
-      alert('Bericht verzonden: pressed');
-    };
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>
 
