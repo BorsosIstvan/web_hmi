@@ -2,11 +2,11 @@ const client = mqtt.connect('poci.n-soft.net:1883'); // Pas eventueel IP/hostnam
 
 client.on('connect', () => {
   console.log("MQTT verbonden");
-  client.subscribe('hmi/led'); // Luister op dit topic
+  client.subscribe('test/topic'); // Luister op dit topic
 });
 
 client.on('message', (topic, message) => {
-  if (topic === 'hmi/led') {
+  if (topic === 'test/topic') {
     const led = document.getElementById('led');
     const status = document.getElementById('ledStatus');
     if (message.toString() === 'on') {
