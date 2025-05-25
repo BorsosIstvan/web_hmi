@@ -1,4 +1,4 @@
-const client = mqtt.connect('ws://raspberrypi.local:9001'); // Pas eventueel IP/hostname aan
+const client = mqtt.connect('poci.n-soft.net:1883'); // Pas eventueel IP/hostname aan
 
 client.on('connect', () => {
   console.log("MQTT verbonden");
