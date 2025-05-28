@@ -28,8 +28,11 @@ client.on('message', (topic, message) => {
   }
 });
 
-document.getElementById('sendButton').addEventListener('click', () => {
+document.getElementById('onButton').addEventListener('click', () => {
   console.log('Stuur bericht "on" naar topic hmi/led');
   client.publish('hmi/led', 'on');
+document.getElementById('offButton').addEventListener('click', () => {
+  console.log('Stuur bericht "off" naar topic hmi/led');
+  client.publish('hmi/led', 'off');
 });
 
