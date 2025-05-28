@@ -1,43 +1,73 @@
-<button id="btnOn">LED Aan</button>
-<button id="btnOff">LED Uit</button>
-<div id="led" style="width:50px; height:50px; border-radius:50%; background-color:red; margin-top:20px;"></div>
-<div id="ledStatus">OFF</div>
+<!DOCTYPE html>
+<html>
+<head>
+  <title>MQTT HMI</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    #led { width: 50px; height: 50px; border-radius: 50%; background: red; margin-bottom: 10px; }
+    #messageBox { margin-top: 20px; font-size: 18px; color: blue; }
+  </style>
+</head>
+<body>
 
-<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-<script>
-const client = mqtt.connect('ws://poci.n-soft.net:9001');
+  <h2>HMI Dashboard</h2>
 
-client.on('connect', () => {
-  console.log("MQTT verbonden");
-  client.subscribe('hmi/led');
-});
+  <!-- LED status -->
+  <div id="led"></div>
+  Status: <span id="ledStatus">OFF</span>
 
-client.on('message', (topic, message) => {
-  if (topic === 'hmi/led') {
-    const msg = message.toString();
-    console.log("Ontvangen:", msg);
-    updateLed(msg === 'on');
-  }
-});
+  <hr>
 
-function updateLed(state) {
-  const led = document.getElementById('led');
-  const status = document.getElementById('ledStatus');
-  if (state) {
-    led.style.backgroundColor = 'green';
-    status.textContent = 'ON';
-  } else {
-    led.style.backgroundColor = 'red';
-    status.textContent = 'OFF';
-  }
-}
+  <!-- ON / OFF buttons -->
+  <button onclick="client.publish('hmi/led', 'on')">LED ON</button>
+  <button onclick="client.publish('hmi/led', 'off')">LED OFF</button>
 
-document.getElementById('btnOn').addEventListener('click', () => {
-  client.publish('hmi/led', 'on');
-});
+  <hr>
 
-document.getElementById('btnOff').addEventListener('click', () => {
-  client.publish('hmi/led', 'off');
-});
-</script>
+  <!-- Tekst input en verzenden -->
+  <input type="text" id="tekstInput" placeholder="Typ je bericht hier">
+  <button onclick="stuurTekst()">Stuur tekst</button>
+
+  <!-- Weergave van ontvangen bericht -->
+  <div id="messageBox"></div>
+
+  <script>
+    const client = mqtt.connect('ws://poci.n-soft.net:9001');
+
+    client.on('connect', () => {
+      console.log("MQTT verbonden");
+      client.subscribe('hmi/led');
+      client.subscribe('hmi/message');
+    });
+
+    client.on('message', (topic, message) => {
+      if (topic === 'hmi/led') {
+        const led = document.getElementById('led');
+        const status = document.getElementById('ledStatus');
+        if (message.toString() === 'on') {
+          led.style.backgroundColor = 'green';
+          status.textContent = 'ON';
+        } else {
+          led.style.backgroundColor = 'red';
+          status.textContent = 'OFF';
+        }
+      }
+
+      if (topic === 'hmi/message') {
+        document.getElementById('messageBox').textContent = message.toString();
+      }
+    });
+
+    function stuurTekst() {
+      const tekst = document.getElementById('tekstInput').value;
+      if (tekst.trim() !== "") {
+        client.publish('hmi/message', tekst);
+        document.getElementById('tekstInput').value = "";
+      }
+    }
+  </script>
+
+</body>
+</html>
 
