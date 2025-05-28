@@ -1,24 +1,43 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>István's HMI Dashboard</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-</head>
-<body>
-  <h1>HMI Dashboard</h1>
-  
-  <button id="sendButton">Stuur MQTT</button>
+<button id="btnOn">LED Aan</button>
+<button id="btnOff">LED Uit</button>
+<div id="led" style="width:50px; height:50px; border-radius:50%; background-color:red; margin-top:20px;"></div>
+<div id="ledStatus">OFF</div>
 
-  <button id="onButton">Stuur on MQTT</button>
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script>
+const client = mqtt.connect('ws://poci.n-soft.net:9001');
 
-  <button id="offButton">Stuur off MQTT</button>
+client.on('connect', () => {
+  console.log("MQTT verbonden");
+  client.subscribe('hmi/led');
+});
 
-  <div class="status-led" id="led"></div>
-  <p>Status: <span id="ledStatus">OFF</span></p>
+client.on('message', (topic, message) => {
+  if (topic === 'hmi/led') {
+    const msg = message.toString();
+    console.log("Ontvangen:", msg);
+    updateLed(msg === 'on');
+  }
+});
 
-  <script src="script.js"></script>
-</body>
-</html>
+function updateLed(state) {
+  const led = document.getElementById('led');
+  const status = document.getElementById('ledStatus');
+  if (state) {
+    led.style.backgroundColor = 'green';
+    status.textContent = 'ON';
+  } else {
+    led.style.backgroundColor = 'red';
+    status.textContent = 'OFF';
+  }
+}
+
+document.getElementById('btnOn').addEventListener('click', () => {
+  client.publish('hmi/led', 'on');
+});
+
+document.getElementById('btnOff').addEventListener('click', () => {
+  client.publish('hmi/led', 'off');
+});
+</script>
 
