@@ -20,7 +20,8 @@ client.on('message', (topic, message) => {
       led.style.backgroundColor = 'green';
       status.textContent = 'ON';
       console.log('LED aan gezet');
-    } else {
+    } 
+    if (message.toString() === 'off') {
       led.style.backgroundColor = 'red';
       status.textContent = 'OFF';
       console.log('LED uit gezet');
@@ -31,6 +32,8 @@ client.on('message', (topic, message) => {
 document.getElementById('onButton').addEventListener('click', () => {
   console.log('Stuur bericht "on" naar topic hmi/led');
   client.publish('hmi/led', 'on');
+});
+
 document.getElementById('offButton').addEventListener('click', () => {
   console.log('Stuur bericht "off" naar topic hmi/led');
   client.publish('hmi/led', 'off');
