@@ -2,128 +2,46 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SCADA Editor</title>
-  <link rel="stylesheet" href="style.css" />
-  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SCADA HMI - Editor</title>
+  <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <div id="toolbar">
-    <button onclick="createButton()">➕ Knop toevoegen</button>
-    <button onclick="createLamp()">💡 Lamp toevoegen</button>
-  </div>
+  <header>
+    <h1>SCADA HMI Editor</h1>
+    <nav>
+      <ul>
+        <li><a href="index.html">Startpagina</a></li>
+        <li><a href="editor.html" class="active">Editor</a></li>
+        <li><a href="#">Projecten</a></li>
+        <li><a href="#">Instellingen</a></li>
+      </ul>
+    </nav>
+  </header>
 
-  <div id="canvas"></div>
+  <main>
+    <section class="toolbar">
+      <button id="addButton">Voeg knop toe</button>
+      <button id="addLamp">Voeg lamp toe</button>
+      <!-- Later meer knoppen zoals slider, tekst, etc. -->
+    </section>
 
-  <script>
-    const mqttClient = mqtt.connect("ws://raspberrypi.local:9001");
+    <section id="workspace" class="workspace">
+      <!-- Hier komen straks de objecten -->
+      <p>Sleep hier objecten naartoe en bewerk ze.</p>
+    </section>
 
-    mqttClient.on("connect", () => {
-      console.log("MQTT verbonden");
-      // Abonneer op bestaande topics van lampen
-      document.querySelectorAll(".lamp").forEach(lamp => {
-        if (lamp.dataset.topic) {
-          mqttClient.subscribe(lamp.dataset.topic);
-        }
-      });
-    });
+    <section id="properties" class="properties">
+      <h2>Eigenschappen</h2>
+      <p>Selecteer een object om de eigenschappen te bewerken.</p>
+      <!-- Hier komen straks de instellingen van het geselecteerde object -->
+    </section>
+  </main>
 
-    mqttClient.on("message", (topic, message) => {
-      document.querySelectorAll(".lamp").forEach(lamp => {
-        if (lamp.dataset.topic === topic) {
-          const msg = message.toString();
-          lamp.style.backgroundColor = msg === "on" ? "green" : "red";
-        }
-      });
-    });
+  <footer>
+    <p>© 2025 István - SCADA HMI project</p>
+  </footer>
 
-    function createButton() {
-      const button = document.createElement("div");
-      button.className = "object button";
-      button.innerText = "Knop";
-      button.dataset.name = "Knop";
-      makeDraggable(button);
-      button.addEventListener("click", () => {
-        const topic = button.dataset.topic;
-        const value = button.dataset.value || "on";
-        if (topic && mqttClient?.connected) {
-          mqttClient.publish(topic, value);
-        }
-      });
-      addContextMenu(button);
-      document.getElementById("canvas").appendChild(button);
-    }
-
-    function createLamp() {
-      const lamp = document.createElement("div");
-      lamp.className = "object lamp";
-      lamp.style.backgroundColor = "gray";
-      lamp.dataset.name = "Lamp";
-      makeDraggable(lamp);
-      addContextMenu(lamp);
-      document.getElementById("canvas").appendChild(lamp);
-    }
-
-    function makeDraggable(el) {
-      el.onmousedown = function (e) {
-        let shiftX = e.clientX - el.getBoundingClientRect().left;
-        let shiftY = e.clientY - el.getBoundingClientRect().top;
-
-        function moveAt(pageX, pageY) {
-          el.style.left = pageX - shiftX + 'px';
-          el.style.top = pageY - shiftY + 'px';
-        }
-
-        function onMouseMove(event) {
-          moveAt(event.pageX, event.pageY);
-        }
-
-        document.addEventListener('mousemove', onMouseMove);
-
-        el.onmouseup = function () {
-          document.removeEventListener('mousemove', onMouseMove);
-          el.onmouseup = null;
-        };
-      };
-      el.ondragstart = function () {
-        return false;
-      };
-    }
-
-    function addContextMenu(object) {
-      object.addEventListener("contextmenu", (e) => {
-        e.preventDefault();
-        const action = prompt("Actie: verwijderen (v), eigenschappen (e)");
-        if (action === "v") {
-          object.remove();
-        } else if (action === "e") {
-          showPropertiesPanel(object);
-        }
-      });
-    }
-
-    function showPropertiesPanel(object) {
-      const newName = prompt("Naam van object:", object.dataset.name || "");
-      if (newName !== null) {
-        object.dataset.name = newName;
-        object.innerText = newName;
-      }
-
-      const newTopic = prompt("MQTT-topic:", object.dataset.topic || "");
-      if (newTopic !== null) {
-        object.dataset.topic = newTopic;
-        if (object.classList.contains("lamp") && mqttClient?.connected) {
-          mqttClient.subscribe(newTopic);
-        }
-      }
-
-      if (object.classList.contains("button")) {
-        const newValue = prompt("MQTT-waarde bij klik:", object.dataset.value || "on");
-        if (newValue !== null) {
-          object.dataset.value = newValue;
-        }
-      }
-    }
-  </script>
+  <script src="js/editor.js"></script>
 </body>
 </html>
