@@ -4,7 +4,7 @@
 $data = json_decode(file_get_contents('php://input'), true);
 if (!$data) exit;
 
-$file = 'berichten.json';
+$file = 'messages/berichten.json';
 
 // Laad bestaande berichten
 if (file_exists($file)) {
