@@ -34,6 +34,28 @@
       border-radius: 4px;
       font-size: 14px;
     }
+    /* Popup styling */
+    #popup {
+      position: fixed;
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: white;
+      border: 1px solid #888;
+      padding: 15px;
+      z-index: 999;
+      display: none;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+    #popup input {
+      display: block;
+      width: 200px;
+      margin-bottom: 10px;
+      padding: 4px;
+    }
+    #popup button {
+      margin-top: 5px;
+    }
   </style>
 </head>
 <body>
@@ -43,17 +65,54 @@
   </div>
   <div id="canvas"></div>
 
+  <!-- Popup -->
+  <div id="popup">
+    <label>Titel: <input type="text" id="popupTitle"></label>
+    <label>Topic: <input type="text" id="popupTopic"></label>
+    <label id="popupMessageLabel">Bericht: <input type="text" id="popupMessage"></label>
+    <button id="popupSave">Opslaan</button>
+    <button id="popupCancel">Annuleren</button>
+  </div>
+
   <script>
     const client = mqtt.connect("ws://raspberrypi.local:9001");
-
-    client.on('connect', () => {
-      console.log("MQTT verbonden");
-    });
-
-    let dragItem = null;
-    let offsetX = 0, offsetY = 0;
+    client.on('connect', () => console.log("MQTT verbonden"));
 
     const canvas = document.getElementById('canvas');
+    let dragItem = null, offsetX = 0, offsetY = 0;
+
+    const popup = document.getElementById('popup');
+    const popupTitle = document.getElementById('popupTitle');
+    const popupTopic = document.getElementById('popupTopic');
+    const popupMessage = document.getElementById('popupMessage');
+    const popupMessageLabel = document.getElementById('popupMessageLabel');
+    let currentElement = null;
+
+    function openPopupFor(element) {
+      popupTitle.value = element.textContent || '';
+      popupTopic.value = element.dataset.topic || '';
+      popupMessage.value = element.dataset.message || '';
+      popupMessageLabel.style.display = element.classList.contains('hmi-button') ? 'block' : 'none';
+      popup.style.display = 'block';
+      currentElement = element;
+    }
+
+    function closePopup() {
+      popup.style.display = 'none';
+      currentElement = null;
+    }
+
+    document.getElementById('popupSave').onclick = () => {
+      if (!currentElement) return;
+      currentElement.dataset.topic = popupTopic.value;
+      currentElement.textContent = popupTitle.value;
+      if (currentElement.classList.contains('hmi-button')) {
+        currentElement.dataset.message = popupMessage.value;
+      }
+      closePopup();
+    };
+
+    document.getElementById('popupCancel').onclick = closePopup;
 
     function createLamp(x = 100, y = 100) {
       const lamp = document.createElement('div');
@@ -78,6 +137,8 @@
         offsetY = e.offsetY;
       });
 
+      lamp.addEventListener('dblclick', (e) => openPopupFor(lamp));
+
       client.subscribe(lamp.dataset.topic);
     }
 
@@ -88,12 +149,14 @@
       button.style.top = y + 'px';
       button.textContent = 'Druk mij';
       button.dataset.topic = 'hmi/button1';
+      button.dataset.message = 'pressed';
       canvas.appendChild(button);
 
       button.addEventListener('click', (e) => {
         if (dragItem) return;
-        client.publish(button.dataset.topic, 'pressed');
-        console.log('MQTT: pressed →', button.dataset.topic);
+        const msg = button.dataset.message || 'pressed';
+        client.publish(button.dataset.topic, msg);
+        console.log('MQTT gestuurd:', msg, 'naar', button.dataset.topic);
       });
 
       button.addEventListener('mousedown', (e) => {
@@ -101,6 +164,8 @@
         offsetX = e.offsetX;
         offsetY = e.offsetY;
       });
+
+      button.addEventListener('dblclick', (e) => openPopupFor(button));
     }
 
     canvas.addEventListener('mousemove', (e) => {
