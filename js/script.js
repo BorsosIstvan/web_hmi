@@ -48,7 +48,7 @@ function addMessage(name, message) {
 }
 
 function loadHistory() {
-  fetch("php/load_messages.php")
+  fetch("php/load_message.php")
     .then(res => res.json())
     .then(data => {
       data.forEach(msg => {
