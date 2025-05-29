@@ -2,87 +2,97 @@
 <html>
 <head>
   <title>SCADA HMI Editor</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
     body { font-family: sans-serif; margin: 0; }
-    #toolbar { background: #eee; padding: 10px; border-bottom: 1px solid #ccc; }
-    #canvas { position: relative; width: 100%; height: 90vh; background: #f9f9f9; }
+    #toolbar { padding: 10px; background: #eee; }
+    #canvas {
+      position: relative;
+      height: 90vh;
+      background: #f9f9f9;
+      border: 1px solid #ccc;
+      overflow: hidden;
+    }
     .lamp {
-      width: 50px;
-      height: 50px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
-      background-color: red;
       position: absolute;
+      background: red;
       cursor: move;
-      border: 2px solid #444;
+      user-select: none;
     }
   </style>
 </head>
 <body>
+  <div id="toolbar">
+    <button id="addLamp">+ Lamp</button>
+  </div>
+  <div id="canvas"></div>
 
-<div id="toolbar">
-  <button onclick="addLamp()">+ Lamp</button>
-</div>
-<div id="canvas"></div>
+  <script>
+    const client = mqtt.connect("ws://raspberrypi.local:9001");
 
-<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-<script>
-  const canvas = document.getElementById('canvas');
-  const client = mqtt.connect('ws://poci.n-soft.net:9001');
-
-  client.on('connect', () => {
-    console.log('MQTT verbonden');
-  });
-
-  let lampCount = 0;
-
-  function addLamp() {
-    lampCount++;
-    const lampId = 'lamp' + lampCount;
-    const lamp = document.createElement('div');
-    lamp.className = 'lamp';
-    lamp.style.left = (20 + lampCount * 60) + 'px';
-    lamp.style.top = '50px';
-    lamp.id = lampId;
-    lamp.dataset.topic = 'hmi/' + lampId;
-    canvas.appendChild(lamp);
-
-    // Subscriben op het topic
-    client.subscribe(lamp.dataset.topic);
-
-    // Klik = toggle kleur + publish
-    lamp.addEventListener('click', () => {
-      const isOn = lamp.style.backgroundColor === 'green';
-      const newState = isOn ? 'off' : 'on';
-      lamp.style.backgroundColor = isOn ? 'red' : 'green';
-      client.publish(lamp.dataset.topic, newState);
+    client.on('connect', () => {
+      console.log("MQTT verbonden");
     });
 
-    // Drag functionaliteit
-    lamp.onmousedown = function (e) {
-      const offsetX = e.offsetX;
-      const offsetY = e.offsetY;
-      function moveAt(x, y) {
-        lamp.style.left = x - offsetX + 'px';
-        lamp.style.top = y - offsetY + 'px';
-      }
-      function onMouseMove(e) {
-        moveAt(e.pageX, e.pageY);
-      }
-      document.addEventListener('mousemove', onMouseMove);
-      lamp.onmouseup = () => {
-        document.removeEventListener('mousemove', onMouseMove);
-        lamp.onmouseup = null;
-      };
-    };
+    let dragItem = null;
+    let offsetX = 0, offsetY = 0;
 
-    // Ontvang berichten
+    const canvas = document.getElementById('canvas');
+
+    function createLamp(x = 100, y = 100) {
+      const lamp = document.createElement('div');
+      lamp.className = 'lamp';
+      lamp.style.left = x + 'px';
+      lamp.style.top = y + 'px';
+      lamp.dataset.state = 'off';
+      lamp.dataset.topic = 'hmi/led';  // voor nu één standaard topic
+      canvas.appendChild(lamp);
+
+      lamp.addEventListener('click', (e) => {
+        if (dragItem) return; // voorkomen togglen tijdens slepen
+        const newState = lamp.dataset.state === 'on' ? 'off' : 'on';
+        lamp.dataset.state = newState;
+        lamp.style.background = newState === 'on' ? 'green' : 'red';
+        client.publish(lamp.dataset.topic, newState);
+      });
+
+      lamp.addEventListener('mousedown', (e) => {
+        dragItem = lamp;
+        offsetX = e.offsetX;
+        offsetY = e.offsetY;
+      });
+
+      client.subscribe(lamp.dataset.topic);
+    }
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (dragItem) {
+        dragItem.style.left = (e.clientX - offsetX) + 'px';
+        dragItem.style.top = (e.clientY - offsetY - canvas.getBoundingClientRect().top) + 'px';
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      dragItem = null;
+    });
+
     client.on('message', (topic, message) => {
-      if (topic === lamp.dataset.topic) {
-        lamp.style.backgroundColor = message.toString() === 'on' ? 'green' : 'red';
-      }
+      const lamps = document.querySelectorAll('.lamp');
+      lamps.forEach(lamp => {
+        if (lamp.dataset.topic === topic) {
+          const msg = message.toString();
+          lamp.dataset.state = msg;
+          lamp.style.background = msg === 'on' ? 'green' : 'red';
+        }
+      });
     });
-  }
-</script>
 
+    document.getElementById('addLamp').addEventListener('click', () => {
+      createLamp();
+    });
+  </script>
 </body>
 </html>
