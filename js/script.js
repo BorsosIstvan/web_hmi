@@ -30,7 +30,7 @@ sendButton.addEventListener("click", () => {
   client.publish(topic, payload);
 
   // Verstuur naar PHP voor opslag
-  fetch("php/save_message.php", {
+  fetch("save_message.php", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: payload
@@ -48,7 +48,7 @@ function addMessage(name, message) {
 }
 
 function loadHistory() {
-  fetch("php/load_message.php")
+  fetch("load_message.php")
     .then(res => res.json())
     .then(data => {
       data.forEach(msg => {
