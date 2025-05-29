@@ -4,7 +4,7 @@
 $data = json_decode(file_get_contents('php://input'), true);
 if (!$data) exit;
 
-$file = 'messages/berichten.json';
+$file = '/var/www/html/web_hmi/messages/berichten.json';
 
 // Laad bestaande berichten
 if (file_exists($file)) {
