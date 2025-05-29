@@ -1,202 +1,162 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SCADA HMI Editor</title>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
-    body { font-family: sans-serif; margin: 0; }
-    #toolbar { padding: 10px; background: #eee; }
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      user-select: none;
+    }
+    #toolbar {
+      background: #333;
+      color: white;
+      padding: 10px;
+      display: flex;
+      gap: 10px;
+    }
     #canvas {
       position: relative;
-      height: 90vh;
-      background: #f9f9f9;
-      border: 1px solid #ccc;
-      overflow: hidden;
+      width: 100vw;
+      height: calc(100vh - 50px);
+      background: #f0f0f0;
     }
-    .lamp, .hmi-button {
+    .object {
       position: absolute;
-      user-select: none;
+      padding: 10px;
+      background: #ccc;
+      border-radius: 8px;
       cursor: move;
     }
     .lamp {
       width: 40px;
       height: 40px;
-      border-radius: 50%;
       background: red;
+      border-radius: 50%;
     }
-    .hmi-button {
-      width: 80px;
-      height: 30px;
-      background: #007bff;
-      color: white;
-      text-align: center;
-      line-height: 30px;
-      border-radius: 4px;
-      font-size: 14px;
-    }
-    /* Popup styling */
-    #popup {
-      position: fixed;
-      top: 20%;
-      left: 50%;
-      transform: translateX(-50%);
+    .context-menu {
+      position: absolute;
       background: white;
-      border: 1px solid #888;
-      padding: 15px;
-      z-index: 999;
-      display: none;
-      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      border: 1px solid #ccc;
+      box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+      z-index: 100;
     }
-    #popup input {
+    .context-menu button {
       display: block;
-      width: 200px;
-      margin-bottom: 10px;
-      padding: 4px;
+      padding: 5px 10px;
+      width: 100%;
+      border: none;
+      background: none;
+      text-align: left;
     }
-    #popup button {
-      margin-top: 5px;
+    .context-menu button:hover {
+      background: #eee;
     }
   </style>
 </head>
 <body>
   <div id="toolbar">
-    <button id="addLamp">+ Lamp</button>
-    <button id="addButton">+ Knop</button>
+    <button onclick="addLamp()">💡 Lamp</button>
+    <button onclick="addButton()">🔘 Knop</button>
   </div>
   <div id="canvas"></div>
 
-  <!-- Popup -->
-  <div id="popup">
-    <label>Titel: <input type="text" id="popupTitle"></label>
-    <label>Topic: <input type="text" id="popupTopic"></label>
-    <label id="popupMessageLabel">Bericht: <input type="text" id="popupMessage"></label>
-    <button id="popupSave">Opslaan</button>
-    <button id="popupCancel">Annuleren</button>
-  </div>
-
   <script>
-    const client = mqtt.connect("ws://poci.n-soft.net:9001");
-    client.on('connect', () => console.log("MQTT verbonden"));
-
     const canvas = document.getElementById('canvas');
-    let dragItem = null, offsetX = 0, offsetY = 0;
+    const client = mqtt.connect('ws://poci.n-soft.net:9001');
 
-    const popup = document.getElementById('popup');
-    const popupTitle = document.getElementById('popupTitle');
-    const popupTopic = document.getElementById('popupTopic');
-    const popupMessage = document.getElementById('popupMessage');
-    const popupMessageLabel = document.getElementById('popupMessageLabel');
-    let currentElement = null;
+    client.on('connect', () => {
+      console.log('MQTT verbonden');
+    });
 
-    function openPopupFor(element) {
-      popupTitle.value = element.textContent || '';
-      popupTopic.value = element.dataset.topic || '';
-      popupMessage.value = element.dataset.message || '';
-      popupMessageLabel.style.display = element.classList.contains('hmi-button') ? 'block' : 'none';
-      popup.style.display = 'block';
-      currentElement = element;
-    }
+    let dragging = null;
+    let offsetX, offsetY;
 
-    function closePopup() {
-      popup.style.display = 'none';
-      currentElement = null;
-    }
-
-    document.getElementById('popupSave').onclick = () => {
-      if (!currentElement) return;
-      currentElement.dataset.topic = popupTopic.value;
-      currentElement.textContent = popupTitle.value;
-      if (currentElement.classList.contains('hmi-button')) {
-        currentElement.dataset.message = popupMessage.value;
+    canvas.addEventListener('mousedown', (e) => {
+      if (e.target.classList.contains('object')) {
+        dragging = e.target;
+        offsetX = e.offsetX;
+        offsetY = e.offsetY;
       }
-      closePopup();
-    };
-
-    document.getElementById('popupCancel').onclick = closePopup;
-
-    function createLamp(x = 100, y = 100) {
-      const lamp = document.createElement('div');
-      lamp.className = 'lamp';
-      lamp.style.left = x + 'px';
-      lamp.style.top = y + 'px';
-      lamp.dataset.state = 'off';
-      lamp.dataset.topic = 'hmi/led';
-      canvas.appendChild(lamp);
-
-      lamp.addEventListener('click', (e) => {
-        if (dragItem) return;
-        const newState = lamp.dataset.state === 'on' ? 'off' : 'on';
-        lamp.dataset.state = newState;
-        lamp.style.background = newState === 'on' ? 'green' : 'red';
-        client.publish(lamp.dataset.topic, newState);
-      });
-
-      lamp.addEventListener('mousedown', (e) => {
-        dragItem = lamp;
-        offsetX = e.offsetX;
-        offsetY = e.offsetY;
-      });
-
-      lamp.addEventListener('dblclick', (e) => openPopupFor(lamp));
-
-      client.subscribe(lamp.dataset.topic);
-    }
-
-    function createButton(x = 150, y = 100) {
-      const button = document.createElement('div');
-      button.className = 'hmi-button';
-      button.style.left = x + 'px';
-      button.style.top = y + 'px';
-      button.textContent = 'Druk mij';
-      button.dataset.topic = 'hmi/button1';
-      button.dataset.message = 'pressed';
-      canvas.appendChild(button);
-
-      button.addEventListener('click', (e) => {
-        if (dragItem) return;
-        const msg = button.dataset.message || 'pressed';
-        client.publish(button.dataset.topic, msg);
-        console.log('MQTT gestuurd:', msg, 'naar', button.dataset.topic);
-      });
-
-      button.addEventListener('mousedown', (e) => {
-        dragItem = button;
-        offsetX = e.offsetX;
-        offsetY = e.offsetY;
-      });
-
-      button.addEventListener('dblclick', (e) => openPopupFor(button));
-    }
+    });
 
     canvas.addEventListener('mousemove', (e) => {
-      if (dragItem) {
-        dragItem.style.left = (e.clientX - offsetX) + 'px';
-        dragItem.style.top = (e.clientY - offsetY - canvas.getBoundingClientRect().top) + 'px';
+      if (dragging) {
+        dragging.style.left = (e.clientX - offsetX) + 'px';
+        dragging.style.top = (e.clientY - offsetY) + 'px';
       }
     });
 
-    window.addEventListener('mouseup', () => {
-      dragItem = null;
+    canvas.addEventListener('mouseup', () => {
+      dragging = null;
     });
 
-    client.on('message', (topic, message) => {
-      const lamps = document.querySelectorAll('.lamp');
-      lamps.forEach(lamp => {
-        if (lamp.dataset.topic === topic) {
-          const msg = message.toString();
-          lamp.dataset.state = msg;
-          lamp.style.background = msg === 'on' ? 'green' : 'red';
+    canvas.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      const obj = e.target.closest('.object');
+      if (obj) showContextMenu(e.pageX, e.pageY, obj);
+    });
+
+    function showContextMenu(x, y, obj) {
+      removeContextMenu();
+      const menu = document.createElement('div');
+      menu.className = 'context-menu';
+      menu.style.left = x + 'px';
+      menu.style.top = y + 'px';
+      const delBtn = document.createElement('button');
+      delBtn.textContent = '❌ Verwijderen';
+      delBtn.onclick = () => {
+        obj.remove();
+        removeContextMenu();
+      };
+      menu.appendChild(delBtn);
+      document.body.appendChild(menu);
+    }
+
+    function removeContextMenu() {
+      const existing = document.querySelector('.context-menu');
+      if (existing) existing.remove();
+    }
+
+    window.addEventListener('click', removeContextMenu);
+
+    function addLamp() {
+      const div = document.createElement('div');
+      div.className = 'object';
+      div.style.left = '100px';
+      div.style.top = '100px';
+      div.dataset.topic = 'hmi/led';
+      const lamp = document.createElement('div');
+      lamp.className = 'lamp';
+      div.appendChild(lamp);
+      canvas.appendChild(div);
+      client.subscribe(div.dataset.topic);
+      client.on('message', (topic, msg) => {
+        if (topic === div.dataset.topic) {
+          lamp.style.backgroundColor = msg.toString() === 'on' ? 'green' : 'red';
         }
       });
-    });
+    }
 
-    document.getElementById('addLamp').addEventListener('click', () => {
-      createLamp();
-    });
-
-    document.getElementById('addButton').addEventListener('click', () => {
-      createButton();
-    });
+    function addButton() {
+      const div = document.createElement('div');
+      div.className = 'object';
+      div.style.left = '200px';
+      div.style.top = '200px';
+      div.dataset.topic = 'hmi/led';
+      const btn = document.createElement('button');
+      btn.textContent = 'Toggle';
+      let state = false;
+      btn.onclick = () => {
+        state = !state;
+        client.publish(div.dataset.topic, state ? 'on' : 'off');
+      };
+      div.appendChild(btn);
+      canvas.appendChild(div);
+    }
   </script>
 </body>
 </html>
