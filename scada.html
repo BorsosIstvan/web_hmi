@@ -1,119 +1,137 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
   <title>SCADA HMI Editor</title>
   <style>
-    body {
-      margin: 0;
-      font-family: sans-serif;
-    }
-    #toolbar {
-      background: #333;
-      color: white;
+    body { font-family: sans-serif; margin: 0; overflow: hidden; }
+    #menu { background: #333; color: white; padding: 10px; display: flex; gap: 10px; }
+    #menu button { background: #555; color: white; border: none; padding: 8px 12px; cursor: pointer; }
+    #canvas { position: relative; width: 100vw; height: calc(100vh - 40px); background: #eee; }
+    .object { position: absolute; cursor: move; padding: 10px; border-radius: 5px; }
+    .lamp { background: red; }
+    .button { background: #444; color: white; }
+    .context-menu { position: absolute; background: white; border: 1px solid #ccc; display: none; z-index: 1000; }
+    .context-menu div { padding: 5px 10px; cursor: pointer; }
+    .context-menu div:hover { background: #eee; }
+    #propertiesPanel {
+      position: fixed;
+      top: 50px;
+      right: 10px;
+      width: 200px;
+      background: white;
+      border: 1px solid #ccc;
       padding: 10px;
+      display: none;
+      z-index: 1000;
     }
-    #canvas {
-      position: relative;
-      width: 100vw;
-      height: 90vh;
-      background: #f0f0f0;
-    }
-    .object {
-      position: absolute;
-      cursor: move;
-      padding: 5px 10px;
-      border-radius: 6px;
-      user-select: none;
-    }
-    .lamp {
-      background: red;
-      color: white;
-    }
-    .button {
-      background: #007bff;
-      color: white;
-    }
+    #propertiesPanel input { width: 100%; margin-bottom: 5px; }
   </style>
 </head>
 <body>
-  <div id="toolbar">
-    <button onclick="addObject('lamp')">Lamp toevoegen</button>
-    <button onclick="addObject('button')">Knop toevoegen</button>
+  <div id="menu">
+    <button onclick="addObject('lamp')">Lamp</button>
+    <button onclick="addObject('button')">Knop</button>
   </div>
   <div id="canvas"></div>
-
+  <div class="context-menu" id="contextMenu">
+    <div onclick="showProperties()">Eigenschappen</div>
+    <div onclick="deleteObject()">Verwijderen</div>
+  </div>
+  <div id="propertiesPanel">
+    <label>Label:</label>
+    <input type="text" id="propLabel"><br>
+    <label>Topic:</label>
+    <input type="text" id="propTopic"><br>
+    <button onclick="saveProperties()">Opslaan</button>
+  </div>
   <script>
+    let objects = [];
+    let selectedObject = null;
+
     const canvas = document.getElementById('canvas');
-    const objects = [];
-
-    function createObjectElement(obj) {
-      const el = document.createElement('div');
-      el.className = `object ${obj.type}`;
-      el.textContent = obj.label;
-      el.style.left = obj.x + 'px';
-      el.style.top = obj.y + 'px';
-      el.draggable = true;
-
-      el.addEventListener('dragstart', (e) => {
-        e.dataTransfer.setData('text/plain', obj.id);
-      });
-
-      el.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        if (confirm(`Verwijder ${obj.label}?`)) {
-          removeObject(obj.id);
-        }
-      });
-
-      return el;
-    }
+    const contextMenu = document.getElementById('contextMenu');
+    const propertiesPanel = document.getElementById('propertiesPanel');
+    const propLabel = document.getElementById('propLabel');
+    const propTopic = document.getElementById('propTopic');
 
     function addObject(type) {
-      const id = 'obj_' + Date.now();
-      const newObj = {
-        id,
-        type,
-        label: type === 'lamp' ? 'Lamp' : 'Knop',
-        topic: 'hmi/example',
-        payload: type === 'button' ? 'on' : '',
-        state: type === 'lamp' ? 'off' : '',
-        x: 100 + Math.random() * 400,
-        y: 100 + Math.random() * 300
+      const obj = {
+        id: Date.now(),
+        type: type,
+        label: type,
+        topic: 'hmi/topic',
+        x: 100,
+        y: 100
       };
-      objects.push(newObj);
-      renderObjects();
+      objects.push(obj);
+      render();
     }
 
-    function removeObject(id) {
-      const index = objects.findIndex(obj => obj.id === id);
-      if (index !== -1) {
-        objects.splice(index, 1);
-        renderObjects();
-      }
-    }
-
-    function renderObjects() {
+    function render() {
       canvas.innerHTML = '';
       for (const obj of objects) {
-        const el = createObjectElement(obj);
+        const el = document.createElement('div');
+        el.className = `object ${obj.type}`;
+        el.textContent = obj.label;
+        el.style.left = obj.x + 'px';
+        el.style.top = obj.y + 'px';
+        el.onmousedown = e => startDrag(e, obj);
+        el.oncontextmenu = e => showContextMenu(e, obj);
         canvas.appendChild(el);
       }
     }
 
-    // Drag-and-drop binnen canvas
-    canvas.addEventListener('dragover', e => e.preventDefault());
-    canvas.addEventListener('drop', e => {
+    function startDrag(e, obj) {
       e.preventDefault();
-      const id = e.dataTransfer.getData('text');
-      const obj = objects.find(o => o.id === id);
-      if (obj) {
-        const rect = canvas.getBoundingClientRect();
-        obj.x = e.clientX - rect.left;
-        obj.y = e.clientY - rect.top;
-        renderObjects();
+      const offsetX = e.clientX - obj.x;
+      const offsetY = e.clientY - obj.y;
+      function onMouseMove(e) {
+        obj.x = e.clientX - offsetX;
+        obj.y = e.clientY - offsetY;
+        render();
       }
-    });
+      function onMouseUp() {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      }
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    }
+
+    function showContextMenu(e, obj) {
+      e.preventDefault();
+      selectedObject = obj;
+      contextMenu.style.left = e.pageX + 'px';
+      contextMenu.style.top = e.pageY + 'px';
+      contextMenu.style.display = 'block';
+    }
+
+    function deleteObject() {
+      objects = objects.filter(o => o !== selectedObject);
+      selectedObject = null;
+      contextMenu.style.display = 'none';
+      render();
+    }
+
+    function showProperties() {
+      if (!selectedObject) return;
+      contextMenu.style.display = 'none';
+      propLabel.value = selectedObject.label;
+      propTopic.value = selectedObject.topic;
+      propertiesPanel.style.display = 'block';
+    }
+
+    function saveProperties() {
+      if (!selectedObject) return;
+      selectedObject.label = propLabel.value;
+      selectedObject.topic = propTopic.value;
+      propertiesPanel.style.display = 'none';
+      render();
+    }
+
+    window.onclick = () => {
+      contextMenu.style.display = 'none';
+    }
   </script>
 </body>
 </html>
