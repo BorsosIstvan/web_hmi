@@ -1,4 +1,4 @@
-const client = mqtt.connect("ws://poci.n-soft.net:9001"); // Pas IP aan indien nodig
+const client = mqtt.connect("ws://poci.n-soft.net:9001"); // Pas IP aan
 const topic = "chat/messages";
 
 const messagesDiv = document.getElementById("messages");
@@ -9,6 +9,7 @@ const sendButton = document.getElementById("sendButton");
 client.on("connect", () => {
   console.log("✅ Verbonden met MQTT broker");
   client.subscribe(topic);
+  loadHistory(); // Laad berichten uit berichten.json
 });
 
 client.on("message", (receivedTopic, payload) => {
@@ -24,7 +25,17 @@ sendButton.addEventListener("click", () => {
   if (!name || !message) return;
 
   const payload = JSON.stringify({ name, message });
+
+  // Verstuur naar MQTT
   client.publish(topic, payload);
+
+  // Verstuur naar PHP voor opslag
+  fetch("save_message.php", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: payload
+  });
+  
   messageInput.value = "";
 });
 
@@ -34,4 +45,14 @@ function addMessage(name, message) {
   div.innerHTML = `<span class="name">${name}:</span> ${message}`;
   messagesDiv.appendChild(div);
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function loadHistory() {
+  fetch("load_messages.php")
+    .then(res => res.json())
+    .then(data => {
+      data.forEach(msg => {
+        addMessage(msg.name, msg.message);
+      });
+    });
 }
