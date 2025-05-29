@@ -1,162 +1,119 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
   <title>SCADA HMI Editor</title>
-  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
     body {
       margin: 0;
       font-family: sans-serif;
-      user-select: none;
     }
     #toolbar {
       background: #333;
       color: white;
       padding: 10px;
-      display: flex;
-      gap: 10px;
     }
     #canvas {
       position: relative;
       width: 100vw;
-      height: calc(100vh - 50px);
+      height: 90vh;
       background: #f0f0f0;
     }
     .object {
       position: absolute;
-      padding: 10px;
-      background: #ccc;
-      border-radius: 8px;
       cursor: move;
+      padding: 5px 10px;
+      border-radius: 6px;
+      user-select: none;
     }
     .lamp {
-      width: 40px;
-      height: 40px;
       background: red;
-      border-radius: 50%;
+      color: white;
     }
-    .context-menu {
-      position: absolute;
-      background: white;
-      border: 1px solid #ccc;
-      box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
-      z-index: 100;
-    }
-    .context-menu button {
-      display: block;
-      padding: 5px 10px;
-      width: 100%;
-      border: none;
-      background: none;
-      text-align: left;
-    }
-    .context-menu button:hover {
-      background: #eee;
+    .button {
+      background: #007bff;
+      color: white;
     }
   </style>
 </head>
 <body>
   <div id="toolbar">
-    <button onclick="addLamp()">💡 Lamp</button>
-    <button onclick="addButton()">🔘 Knop</button>
+    <button onclick="addObject('lamp')">Lamp toevoegen</button>
+    <button onclick="addObject('button')">Knop toevoegen</button>
   </div>
   <div id="canvas"></div>
 
   <script>
     const canvas = document.getElementById('canvas');
-    const client = mqtt.connect('ws://poci.n-soft.net:9001');
+    const objects = [];
 
-    client.on('connect', () => {
-      console.log('MQTT verbonden');
-    });
+    function createObjectElement(obj) {
+      const el = document.createElement('div');
+      el.className = `object ${obj.type}`;
+      el.textContent = obj.label;
+      el.style.left = obj.x + 'px';
+      el.style.top = obj.y + 'px';
+      el.draggable = true;
 
-    let dragging = null;
-    let offsetX, offsetY;
+      el.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', obj.id);
+      });
 
-    canvas.addEventListener('mousedown', (e) => {
-      if (e.target.classList.contains('object')) {
-        dragging = e.target;
-        offsetX = e.offsetX;
-        offsetY = e.offsetY;
-      }
-    });
-
-    canvas.addEventListener('mousemove', (e) => {
-      if (dragging) {
-        dragging.style.left = (e.clientX - offsetX) + 'px';
-        dragging.style.top = (e.clientY - offsetY) + 'px';
-      }
-    });
-
-    canvas.addEventListener('mouseup', () => {
-      dragging = null;
-    });
-
-    canvas.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      const obj = e.target.closest('.object');
-      if (obj) showContextMenu(e.pageX, e.pageY, obj);
-    });
-
-    function showContextMenu(x, y, obj) {
-      removeContextMenu();
-      const menu = document.createElement('div');
-      menu.className = 'context-menu';
-      menu.style.left = x + 'px';
-      menu.style.top = y + 'px';
-      const delBtn = document.createElement('button');
-      delBtn.textContent = '❌ Verwijderen';
-      delBtn.onclick = () => {
-        obj.remove();
-        removeContextMenu();
-      };
-      menu.appendChild(delBtn);
-      document.body.appendChild(menu);
-    }
-
-    function removeContextMenu() {
-      const existing = document.querySelector('.context-menu');
-      if (existing) existing.remove();
-    }
-
-    window.addEventListener('click', removeContextMenu);
-
-    function addLamp() {
-      const div = document.createElement('div');
-      div.className = 'object';
-      div.style.left = '100px';
-      div.style.top = '100px';
-      div.dataset.topic = 'hmi/led';
-      const lamp = document.createElement('div');
-      lamp.className = 'lamp';
-      div.appendChild(lamp);
-      canvas.appendChild(div);
-      client.subscribe(div.dataset.topic);
-      client.on('message', (topic, msg) => {
-        if (topic === div.dataset.topic) {
-          lamp.style.backgroundColor = msg.toString() === 'on' ? 'green' : 'red';
+      el.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        if (confirm(`Verwijder ${obj.label}?`)) {
+          removeObject(obj.id);
         }
       });
+
+      return el;
     }
 
-    function addButton() {
-      const div = document.createElement('div');
-      div.className = 'object';
-      div.style.left = '200px';
-      div.style.top = '200px';
-      div.dataset.topic = 'hmi/led';
-      const btn = document.createElement('button');
-      btn.textContent = 'Toggle';
-      let state = false;
-      btn.onclick = () => {
-        state = !state;
-        client.publish(div.dataset.topic, state ? 'on' : 'off');
+    function addObject(type) {
+      const id = 'obj_' + Date.now();
+      const newObj = {
+        id,
+        type,
+        label: type === 'lamp' ? 'Lamp' : 'Knop',
+        topic: 'hmi/example',
+        payload: type === 'button' ? 'on' : '',
+        state: type === 'lamp' ? 'off' : '',
+        x: 100 + Math.random() * 400,
+        y: 100 + Math.random() * 300
       };
-      div.appendChild(btn);
-      canvas.appendChild(div);
+      objects.push(newObj);
+      renderObjects();
     }
+
+    function removeObject(id) {
+      const index = objects.findIndex(obj => obj.id === id);
+      if (index !== -1) {
+        objects.splice(index, 1);
+        renderObjects();
+      }
+    }
+
+    function renderObjects() {
+      canvas.innerHTML = '';
+      for (const obj of objects) {
+        const el = createObjectElement(obj);
+        canvas.appendChild(el);
+      }
+    }
+
+    // Drag-and-drop binnen canvas
+    canvas.addEventListener('dragover', e => e.preventDefault());
+    canvas.addEventListener('drop', e => {
+      e.preventDefault();
+      const id = e.dataTransfer.getData('text');
+      const obj = objects.find(o => o.id === id);
+      if (obj) {
+        const rect = canvas.getBoundingClientRect();
+        obj.x = e.clientX - rect.left;
+        obj.y = e.clientY - rect.top;
+        renderObjects();
+      }
+    });
   </script>
 </body>
 </html>
