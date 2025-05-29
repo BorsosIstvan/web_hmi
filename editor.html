@@ -2,46 +2,27 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SCADA HMI - Editor</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SCADA Editor</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header>
     <h1>SCADA HMI Editor</h1>
     <nav>
-      <ul>
-        <li><a href="index.html">Startpagina</a></li>
-        <li><a href="editor.html" class="active">Editor</a></li>
-        <li><a href="#">Projecten</a></li>
-        <li><a href="#">Instellingen</a></li>
-      </ul>
+      <button id="addButton">➕ Knop</button>
+      <button id="addLamp">💡 Lamp</button>
+      <button id="saveProject">💾 Opslaan</button>
+      <a href="index.html">🏠 Startpagina</a>
     </nav>
   </header>
 
   <main>
-    <section class="toolbar">
-      <button id="addButton">Voeg knop toe</button>
-      <button id="addLamp">Voeg lamp toe</button>
-      <!-- Later meer knoppen zoals slider, tekst, etc. -->
-    </section>
-
-    <section id="workspace" class="workspace">
-      <!-- Hier komen straks de objecten -->
-      <p>Sleep hier objecten naartoe en bewerk ze.</p>
-    </section>
-
-    <section id="properties" class="properties">
-      <h2>Eigenschappen</h2>
-      <p>Selecteer een object om de eigenschappen te bewerken.</p>
-      <!-- Hier komen straks de instellingen van het geselecteerde object -->
-    </section>
+    <div id="canvas" class="canvas">
+      <!-- Hier worden objecten toegevoegd -->
+    </div>
   </main>
 
-  <footer>
-    <p>© 2025 István - SCADA HMI project</p>
-  </footer>
-
-  <script src="js/editor.js"></script>
+  <script src="editor.js"></script>
 </body>
 </html>
