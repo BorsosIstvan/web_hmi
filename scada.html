@@ -75,7 +75,7 @@
   </div>
 
   <script>
-    const client = mqtt.connect("ws://raspberrypi.local:9001");
+    const client = mqtt.connect("ws://poci.n-soft.net:9001");
     client.on('connect', () => console.log("MQTT verbonden"));
 
     const canvas = document.getElementById('canvas');
