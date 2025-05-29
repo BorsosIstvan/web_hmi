@@ -13,20 +13,33 @@
       border: 1px solid #ccc;
       overflow: hidden;
     }
+    .lamp, .hmi-button {
+      position: absolute;
+      user-select: none;
+      cursor: move;
+    }
     .lamp {
       width: 40px;
       height: 40px;
       border-radius: 50%;
-      position: absolute;
       background: red;
-      cursor: move;
-      user-select: none;
+    }
+    .hmi-button {
+      width: 80px;
+      height: 30px;
+      background: #007bff;
+      color: white;
+      text-align: center;
+      line-height: 30px;
+      border-radius: 4px;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
   <div id="toolbar">
     <button id="addLamp">+ Lamp</button>
+    <button id="addButton">+ Knop</button>
   </div>
   <div id="canvas"></div>
 
@@ -48,11 +61,11 @@
       lamp.style.left = x + 'px';
       lamp.style.top = y + 'px';
       lamp.dataset.state = 'off';
-      lamp.dataset.topic = 'hmi/led';  // voor nu één standaard topic
+      lamp.dataset.topic = 'hmi/led';
       canvas.appendChild(lamp);
 
       lamp.addEventListener('click', (e) => {
-        if (dragItem) return; // voorkomen togglen tijdens slepen
+        if (dragItem) return;
         const newState = lamp.dataset.state === 'on' ? 'off' : 'on';
         lamp.dataset.state = newState;
         lamp.style.background = newState === 'on' ? 'green' : 'red';
@@ -66,6 +79,28 @@
       });
 
       client.subscribe(lamp.dataset.topic);
+    }
+
+    function createButton(x = 150, y = 100) {
+      const button = document.createElement('div');
+      button.className = 'hmi-button';
+      button.style.left = x + 'px';
+      button.style.top = y + 'px';
+      button.textContent = 'Druk mij';
+      button.dataset.topic = 'hmi/button1';
+      canvas.appendChild(button);
+
+      button.addEventListener('click', (e) => {
+        if (dragItem) return;
+        client.publish(button.dataset.topic, 'pressed');
+        console.log('MQTT: pressed →', button.dataset.topic);
+      });
+
+      button.addEventListener('mousedown', (e) => {
+        dragItem = button;
+        offsetX = e.offsetX;
+        offsetY = e.offsetY;
+      });
     }
 
     canvas.addEventListener('mousemove', (e) => {
@@ -92,6 +127,10 @@
 
     document.getElementById('addLamp').addEventListener('click', () => {
       createLamp();
+    });
+
+    document.getElementById('addButton').addEventListener('click', () => {
+      createButton();
     });
   </script>
 </body>
