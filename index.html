@@ -1,21 +1,34 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="nl">
 <head>
-  <meta charset="UTF-8">
-  <title>István's HMI Dashboard</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SCADA HMI - Startpagina</title>
+  <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <h1>HMI Dashboard</h1>
+  <header>
+    <h1>SCADA HMI</h1>
+    <nav>
+      <ul>
+        <li><a href="editor.html">Editor openen</a></li>
+        <li><a href="#">Projecten</a></li>
+        <li><a href="#">Instellingen</a></li>
+      </ul>
+    </nav>
+  </header>
 
-  <button id="onButton">led aan MQTT</button>
+  <main>
+    <section class="welcome">
+      <h2>Welkom bij SCADA HMI</h2>
+      <p>Start met een nieuw project of open de editor om je HMI te bouwen.</p>
+      <a href="editor.html" class="btn">Start editor</a>
+    </section>
+  </main>
 
-  <button id="offButton">led uti MQTT</button>
-
-  <div class="status-led" id="led"></div>
-  <p>Status: <span id="ledStatus">OFF</span></p>
-
-  <script src="script.js"></script>
+  <footer>
+    <p>© 2025 István - SCADA HMI project</p>
+  </footer>
 </body>
 </html>
+
