@@ -1,137 +1,131 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SCADA HMI Editor</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
-    body { font-family: sans-serif; margin: 0; overflow: hidden; }
-    #menu { background: #333; color: white; padding: 10px; display: flex; gap: 10px; }
-    #menu button { background: #555; color: white; border: none; padding: 8px 12px; cursor: pointer; }
-    #canvas { position: relative; width: 100vw; height: calc(100vh - 40px); background: #eee; }
-    .object { position: absolute; cursor: move; padding: 10px; border-radius: 5px; }
-    .lamp { background: red; }
-    .button { background: #444; color: white; }
-    .context-menu { position: absolute; background: white; border: 1px solid #ccc; display: none; z-index: 1000; }
-    .context-menu div { padding: 5px 10px; cursor: pointer; }
-    .context-menu div:hover { background: #eee; }
-    #propertiesPanel {
-      position: fixed;
-      top: 50px;
-      right: 10px;
-      width: 200px;
-      background: white;
-      border: 1px solid #ccc;
-      padding: 10px;
-      display: none;
-      z-index: 1000;
-    }
-    #propertiesPanel input { width: 100%; margin-bottom: 5px; }
+    body { margin: 0; font-family: sans-serif; }
+    #toolbar { padding: 10px; background: #eee; display: flex; gap: 10px; }
+    #canvas { position: relative; width: 100vw; height: calc(100vh - 50px); background: #f0f0f0; overflow: hidden; }
+    .object { position: absolute; border: 1px solid #333; padding: 10px; background: white; cursor: move; }
+    #propertyPanel { position: fixed; top: 60px; right: 10px; background: #fff; padding: 10px; border: 1px solid #333; display: none; }
+    #contextMenu { position: absolute; background: white; border: 1px solid #000; display: none; z-index: 1000; }
+    #contextMenu ul { list-style: none; padding: 5px; margin: 0; }
+    #contextMenu ul li { padding: 5px; cursor: pointer; }
+    #contextMenu ul li:hover { background: #ddd; }
   </style>
 </head>
 <body>
-  <div id="menu">
-    <button onclick="addObject('lamp')">Lamp</button>
-    <button onclick="addObject('button')">Knop</button>
+  <div id="toolbar">
+    <button onclick="addButton()">➕ Voeg knop toe</button>
   </div>
   <div id="canvas"></div>
-  <div class="context-menu" id="contextMenu">
-    <div onclick="showProperties()">Eigenschappen</div>
-    <div onclick="deleteObject()">Verwijderen</div>
+
+  <div id="contextMenu">
+    <ul>
+      <li onclick="showPropertyPanel(contextTarget)">🔧 Instellen</li>
+      <li onclick="removeObject(contextTarget)">🗑️ Verwijderen</li>
+    </ul>
   </div>
-  <div id="propertiesPanel">
-    <label>Label:</label>
-    <input type="text" id="propLabel"><br>
-    <label>Topic:</label>
-    <input type="text" id="propTopic"><br>
-    <button onclick="saveProperties()">Opslaan</button>
+
+  <div id="propertyPanel">
+    <div><label>Label: <input id="propLabel"></label></div>
+    <div><label>Topic: <input id="propTopic"></label></div>
+    <div><label>Bericht bij klik: <input id="propMessage"></label></div>
+    <button onclick="applyProperties()">✔️ Toepassen</button>
+    <button onclick="closePropertyPanel()">❌ Sluiten</button>
   </div>
+
   <script>
-    let objects = [];
-    let selectedObject = null;
+    let selected = null;
+    let offsetX = 0;
+    let offsetY = 0;
+    let contextTarget = null;
 
-    const canvas = document.getElementById('canvas');
-    const contextMenu = document.getElementById('contextMenu');
-    const propertiesPanel = document.getElementById('propertiesPanel');
-    const propLabel = document.getElementById('propLabel');
-    const propTopic = document.getElementById('propTopic');
+    const client = mqtt.connect('ws://raspberrypi.local:9001');
+    client.on('connect', () => console.log('MQTT verbonden'));
 
-    function addObject(type) {
-      const obj = {
-        id: Date.now(),
-        type: type,
-        label: type,
-        topic: 'hmi/topic',
-        x: 100,
-        y: 100
-      };
-      objects.push(obj);
-      render();
+    function addButton() {
+      const btn = document.createElement('div');
+      btn.className = 'object';
+      btn.innerText = 'Knop';
+      btn.style.left = '100px';
+      btn.style.top = '100px';
+      btn.dataset.topic = 'hmi/default';
+      btn.dataset.message = 'on';
+      btn.dataset.label = 'Knop';
+      btn.addEventListener('mousedown', onMouseDown);
+      btn.addEventListener('contextmenu', showContextMenu);
+      btn.addEventListener('click', () => {
+        const topic = btn.dataset.topic;
+        const message = btn.dataset.message || 'on';
+        if (topic) client.publish(topic, message);
+        console.log(`Verstuurd naar ${topic}: ${message}`);
+      });
+      document.getElementById('canvas').appendChild(btn);
     }
 
-    function render() {
-      canvas.innerHTML = '';
-      for (const obj of objects) {
-        const el = document.createElement('div');
-        el.className = `object ${obj.type}`;
-        el.textContent = obj.label;
-        el.style.left = obj.x + 'px';
-        el.style.top = obj.y + 'px';
-        el.onmousedown = e => startDrag(e, obj);
-        el.oncontextmenu = e => showContextMenu(e, obj);
-        canvas.appendChild(el);
+    function onMouseDown(e) {
+      if (e.button !== 0) return; // Alleen linkermuisklik
+      selected = e.target;
+      offsetX = e.offsetX;
+      offsetY = e.offsetY;
+    }
+
+    document.addEventListener('mousemove', e => {
+      if (selected) {
+        selected.style.left = (e.pageX - offsetX) + 'px';
+        selected.style.top = (e.pageY - offsetY) + 'px';
       }
-    }
+    });
 
-    function startDrag(e, obj) {
+    document.addEventListener('mouseup', () => selected = null);
+
+    function showContextMenu(e) {
       e.preventDefault();
-      const offsetX = e.clientX - obj.x;
-      const offsetY = e.clientY - obj.y;
-      function onMouseMove(e) {
-        obj.x = e.clientX - offsetX;
-        obj.y = e.clientY - offsetY;
-        render();
-      }
-      function onMouseUp() {
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
-      }
-      document.addEventListener('mousemove', onMouseMove);
-      document.addEventListener('mouseup', onMouseUp);
+      contextTarget = e.target;
+      const menu = document.getElementById('contextMenu');
+      menu.style.left = e.pageX + 'px';
+      menu.style.top = e.pageY + 'px';
+      menu.style.display = 'block';
     }
 
-    function showContextMenu(e, obj) {
-      e.preventDefault();
-      selectedObject = obj;
-      contextMenu.style.left = e.pageX + 'px';
-      contextMenu.style.top = e.pageY + 'px';
-      contextMenu.style.display = 'block';
+    function removeObject(obj) {
+      obj.remove();
+      document.getElementById('contextMenu').style.display = 'none';
     }
 
-    function deleteObject() {
-      objects = objects.filter(o => o !== selectedObject);
-      selectedObject = null;
-      contextMenu.style.display = 'none';
-      render();
+    function showPropertyPanel(obj) {
+      document.getElementById('contextMenu').style.display = 'none';
+      const panel = document.getElementById('propertyPanel');
+      panel.style.display = 'block';
+      panel.dataset.target = obj.id;
+      document.getElementById('propLabel').value = obj.dataset.label || '';
+      document.getElementById('propTopic').value = obj.dataset.topic || '';
+      document.getElementById('propMessage').value = obj.dataset.message || '';
+      panel.target = obj;
     }
 
-    function showProperties() {
-      if (!selectedObject) return;
-      contextMenu.style.display = 'none';
-      propLabel.value = selectedObject.label;
-      propTopic.value = selectedObject.topic;
-      propertiesPanel.style.display = 'block';
+    function applyProperties() {
+      const obj = document.getElementById('propertyPanel').target;
+      const label = document.getElementById('propLabel').value;
+      const topic = document.getElementById('propTopic').value;
+      const message = document.getElementById('propMessage').value;
+      obj.innerText = label;
+      obj.dataset.label = label;
+      obj.dataset.topic = topic;
+      obj.dataset.message = message;
     }
 
-    function saveProperties() {
-      if (!selectedObject) return;
-      selectedObject.label = propLabel.value;
-      selectedObject.topic = propTopic.value;
-      propertiesPanel.style.display = 'none';
-      render();
+    function closePropertyPanel() {
+      document.getElementById('propertyPanel').style.display = 'none';
     }
 
-    window.onclick = () => {
-      contextMenu.style.display = 'none';
-    }
+    document.addEventListener('click', () => {
+      document.getElementById('contextMenu').style.display = 'none';
+    });
   </script>
 </body>
 </html>
