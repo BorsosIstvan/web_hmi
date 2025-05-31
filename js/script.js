@@ -24,6 +24,8 @@ sendButton.addEventListener("click", () => {
   const message = messageInput.value.trim();
   if (!name || !message) return;
 
+  localStorage.setItem("chatUser", name); // Opslaan als "ik"
+
   const payload = JSON.stringify({ name, message });
 
   // Verstuur naar MQTT
@@ -40,9 +42,18 @@ sendButton.addEventListener("click", () => {
 });
 
 function addMessage(name, message) {
+  const currentUser = localStorage.getItem("chatUser");
   const div = document.createElement("div");
-  div.className = "message";
-  div.innerHTML = `<span class="name">${name}:</span> ${message}`;
+  div.className = "message-bubble";
+  if (name === currentUser) {
+    div.classList.add("mine");
+  } else {
+    div.classList.add("theirs");
+  }
+  div.innerHTML = `
+    <div class="message-name">${name}</div>
+    <div class="message-text">${message}</div>
+  `;
   messagesDiv.appendChild(div);
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
