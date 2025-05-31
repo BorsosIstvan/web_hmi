@@ -12,7 +12,6 @@ if (file_exists($file)) {
 } else {
     $messages = [];
 }
-
 // Voeg nieuw bericht toe
 $messages[] = [
     "name" => htmlspecialchars($data['name']),
