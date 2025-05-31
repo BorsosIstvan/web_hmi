@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>MQTT SCADA Test</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    .lamp { width: 50px; height: 50px; border-radius: 50%; background: gray; margin: 10px; }
+    .lamp.on { background: limegreen; }
+    button { padding: 10px 20px; font-size: 16px; }
+  </style>
+</head>
+<body>
+
+  <h2>MQTT SCADA Test</h2>
+  <div>
+    <button onclick="toggleLamp()">Schakel lamp</button>
+    <div class="lamp" id="lampje"></div>
+  </div>
+
+  <script>
+    // Verbinding maken met jouw MQTT broker via WebSockets
+    const client = mqtt.connect('ws://poci.n-soft.net:9001');
+
+    client.on('connect', function () {
+      console.log('✅ Verbonden met MQTT broker');
+      // Abonneer op status topic
+      client.subscribe('lamp/status');
+    });
+
+    client.on('message', function (topic, message) {
+      if (topic === 'lamp/status') {
+        const lamp = document.getElementById('lampje');
+        const status = message.toString();
+        lamp.className = status === '1' ? 'lamp on' : 'lamp';
+      }
+    });
+
+    function toggleLamp() {
+      // Stuur 1 of 0 naar lamp/aan topic
+      const lamp = document.getElementById('lampje');
+      const nieuw = lamp.classList.contains('on') ? '0' : '1';
+      client.publish('lamp/aan', nieuw);
+    }
+  </script>
+
+</body>
+</html>
