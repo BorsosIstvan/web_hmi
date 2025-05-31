@@ -1,0 +1,39 @@
+body {
+    margin: 0;
+    font-family: sans-serif;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+  
+  header#chat-header {
+    background-color: #075e54;
+    color: white;
+    padding: 15px;
+    font-size: 18px;
+    text-align: center;
+  }
+  
+  footer {
+    display: flex;
+    padding: 10px;
+    background: #f0f0f0;
+  }
+  
+  #messageInput {
+    flex: 1;
+    padding: 10px;
+    font-size: 16px;
+  }
+  
+  #sendButton {
+    padding: 10px 15px;
+  }
+  
+  .message-bubble .status {
+    display: block;
+    text-align: right;
+    font-size: 12px;
+    color: #888;
+  }
+  
