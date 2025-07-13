@@ -1,4 +1,4 @@
-const client = mqtt.connect("ws://poci.n-soft.net:9001"); // Pas IP aan
+const client = mqtt.connect("wss://poci.n-soft.net:9001"); // Pas IP aan
 const topic = "chat/messages";
 
 const messagesDiv = document.getElementById("messages");

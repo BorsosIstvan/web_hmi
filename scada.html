@@ -40,7 +40,7 @@
       // Stuur 1 of 0 naar lamp/aan topic
       const lamp = document.getElementById('lampje');
       const nieuw = lamp.classList.contains('on') ? '0' : '1';
-      client.publish('lamp/aan', nieuw);
+      client.publish('lamp/status', nieuw);
     }
   </script>
 
